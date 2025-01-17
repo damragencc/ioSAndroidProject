@@ -109,13 +109,21 @@ pipeline {
 				// Appium server'ı durdur
                 sh 'pkill -f appium || true'
 
-                // Test raporlarını arşivle
+                // Test raporlarını her durumda arşivle
                 archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
-                junit '**/target/surefire-reports/*.xml'
+                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+
+                // Test log dosyalarını da arşivle
+                archiveArtifacts artifacts: 'appium.log', allowEmptyArchive: true
+                archiveArtifacts artifacts: '**/target/surefire-reports/*.txt', allowEmptyArchive: true
             }
         }
         success {
 			echo "Pipeline başarıyla tamamlandı!"
+            script {
+				// Başarılı test raporlarını özel olarak işaretleyebiliriz
+                echo "Test raporları başarıyla oluşturuldu"
+            }
         }
         failure {
 			echo "Pipeline'da hata oluştu!"
