@@ -1,8 +1,12 @@
 pipeline {
 	agent any
 
+    triggers {
+		pollSCM('H/5 * * * *')  // Her 5 dakikada bir kontrol et (yük dengelemeli)
+    }
+
     environment {
-		// iOS test ortamı için gerekli değişkenler
+		// iOS test ortamı için gerekli değişkenler - Test Webhook
         APP_PATH = "/Users/damragenc/Desktop/ioSAndroidProject/app/build/outputs/apk/debug/app-debug.apk"
         DEVICE_NAME = "Damra iPhone'u"
         PLATFORM_NAME = "iOS"
