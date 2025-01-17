@@ -1,6 +1,10 @@
 pipeline {
 	agent any
 
+    environment {
+		PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:${env.PATH}"
+    }
+
     triggers {
 		pollSCM('H/5 * * * *')
     }
@@ -18,7 +22,8 @@ pipeline {
 			steps {
 				script {
 					try {
-						sh 'node --version'
+						sh 'which node || true'
+                        sh '/opt/homebrew/bin/node --version || /usr/local/bin/node --version'
                         echo "Node.js yüklü!"
                     } catch (err) {
 						error "Node.js yüklü değil! Lütfen Node.js'i yükleyin."
