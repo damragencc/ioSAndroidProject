@@ -67,6 +67,40 @@ pipeline {
                 }
             }
         }
+
+        stage('Prepare Test Environment') {
+			steps {
+				script {
+					sh '''
+                        # iOS cihaz bağlantısını kontrol et
+                        idevice_id -l | grep ${UDID} || (echo "iOS cihaz bağlı değil!" && exit 1)
+
+                        # WDA durumunu kontrol et
+                        ideviceinstaller -l | grep WebDriverAgentRunner || echo "WDA yüklü değil"
+                    '''
+                }
+            }
+        }
+
+        stage('Run iOS Tests') {
+			steps {
+				script {
+					sh '''
+                        cd ${WORKSPACE}
+
+                        # Test klasörüne git
+                        cd src/test/java
+
+                        # Testleri çalıştır
+                        mvn test -Dplatform.name=${PLATFORM_NAME} \
+                                -Dplatform.version=${PLATFORM_VERSION} \
+                                -Ddevice.name="${DEVICE_NAME}" \
+                                -Dudid=${UDID} \
+                                -Dapp.path=${APP_PATH}
+                    '''
+                }
+            }
+        }
     }
 
     post {
@@ -74,6 +108,10 @@ pipeline {
 			script {
 				// Appium server'ı durdur
                 sh 'pkill -f appium || true'
+
+                // Test raporlarını arşivle
+                archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
+                junit '**/target/surefire-reports/*.xml'
             }
         }
         success {
