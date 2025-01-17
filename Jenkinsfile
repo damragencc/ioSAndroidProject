@@ -62,7 +62,7 @@ pipeline {
 			echo "iOS testleri başarıyla tamamlandı!"
         }
         failure {
-			echo "iOS testlerinde hata oluştu!"
+			echo "iOS testlerinde hata oluştuu!"
         }
     }
 }
