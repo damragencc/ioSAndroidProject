@@ -2,12 +2,15 @@ pipeline {
 	agent any
 
     triggers {
-		pollSCM('H/5 * * * *')  // Her 5 dakikada bir kontrol et (yük dengelemeli)
+		pollSCM('H/5 * * * *')
     }
 
     environment {
-		// iOS test ortamı için gerekli değişkenler - Test Webhook
-        APP_PATH = "/Users/damragenc/Desktop/ioSAndroidProject/app/build/outputs/apk/debug/app-debug.apk"
+		// Global PATH'i güncelle
+        PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
+        // Proje yolu için workspace kullan
+        PROJECT_ROOT = "${WORKSPACE}"
+        APP_PATH = "${PROJECT_ROOT}/app/build/outputs/apk/debug/app-debug.apk"
         DEVICE_NAME = "Damra iPhone'u"
         PLATFORM_NAME = "iOS"
         PLATFORM_VERSION = "16.7.10"
@@ -15,18 +18,36 @@ pipeline {
     }
 
     stages {
-		stage('Start Appium Server') {
+		stage('Setup Environment') {
+			steps {
+				script {
+					// Node.js ve npm'in yüklü olduğundan emin ol
+                    sh '''
+                        node -v
+                        npm -v
+
+                        # Appium'u global olarak yükle (eğer yüklü değilse)
+                        npm list -g appium || npm install -g appium
+                    '''
+                }
+            }
+        }
+
+        stage('Start Appium Server') {
 			steps {
 				script {
 					sh '''
-                        # Eğer çalışan bir Appium server varsa durdur
+                        # Çalışan Appium process'lerini kontrol et ve durdur
                         pkill -f appium || true
 
                         # Appium server'ı başlat
-                        appium --log appium.log &
+                        nohup appium > appium.log 2>&1 &
 
                         # Server'ın başlaması için bekle
                         sleep 10
+
+                        # Appium'un çalıştığını kontrol et
+                        ps aux | grep appium
                     '''
                 }
             }
@@ -36,11 +57,11 @@ pipeline {
 			steps {
 				script {
 					sh '''
-                        # Test klasörüne git
-                        cd /Users/damragenc/Desktop/ioSAndroidProject
+                        # Proje dizininde olduğumuzdan emin ol
+                        cd ${PROJECT_ROOT}
 
-                        # Testleri çalıştır
-                        mvn test
+                        # Maven test
+                        mvn clean test
                     '''
                 }
             }
@@ -53,9 +74,9 @@ pipeline {
 				// Appium server'ı durdur
                 sh 'pkill -f appium || true'
 
-                // Test raporlarını arşivle
+                // Test raporlarını arşivle (eğer varsa)
                 archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
-                junit '**/target/surefire-reports/*.xml'
+                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
             }
         }
         success {
