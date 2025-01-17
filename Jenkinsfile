@@ -88,15 +88,14 @@ pipeline {
 					sh '''
                         cd ${WORKSPACE}
 
-                        # Test klasörüne git
-                        cd src/test/java
-
-                        # Testleri çalıştır
-                        mvn test -Dplatform.name=${PLATFORM_NAME} \
-                                -Dplatform.version=${PLATFORM_VERSION} \
-                                -Ddevice.name="${DEVICE_NAME}" \
-                                -Dudid=${UDID} \
-                                -Dapp.path=${APP_PATH}
+                        # Maven test komutunu workspace'de çalıştır
+                        mvn clean test \
+                            -Dplatform.name=${PLATFORM_NAME} \
+                            -Dplatform.version=${PLATFORM_VERSION} \
+                            -Ddevice.name="${DEVICE_NAME}" \
+                            -Dudid=${UDID} \
+                            -Dapp.path=${APP_PATH} \
+                            -Dsurefire.reportsDirectory=${WORKSPACE}/target/surefire-reports
                     '''
                 }
             }
@@ -109,20 +108,23 @@ pipeline {
 				// Appium server'ı durdur
                 sh 'pkill -f appium || true'
 
+                // Test raporlarının yerini kontrol et
+                sh 'ls -la ${WORKSPACE}/target/surefire-reports || true'
+
                 // Test raporlarını her durumda arşivle
-                archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
-                junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                archiveArtifacts artifacts: 'target/surefire-reports/**/*', allowEmptyArchive: true
+                junit allowEmptyResults: true, testResults: 'target/surefire-reports/**/*.xml'
 
                 // Test log dosyalarını da arşivle
                 archiveArtifacts artifacts: 'appium.log', allowEmptyArchive: true
-                archiveArtifacts artifacts: '**/target/surefire-reports/*.txt', allowEmptyArchive: true
             }
         }
         success {
 			echo "Pipeline başarıyla tamamlandı!"
             script {
-				// Başarılı test raporlarını özel olarak işaretleyebiliriz
-                echo "Test raporları başarıyla oluşturuldu"
+				echo "Test raporları başarıyla oluşturuldu"
+                // Rapor dosyalarının içeriğini göster
+                sh 'cat target/surefire-reports/*.txt || true'
             }
         }
         failure {
