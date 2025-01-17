@@ -13,6 +13,19 @@ pipeline {
                 sh 'ls -la'
             }
         }
+
+        stage('Check Node.js') {
+			steps {
+				script {
+					try {
+						sh 'node --version'
+                        echo "Node.js yüklü!"
+                    } catch (err) {
+						error "Node.js yüklü değil! Lütfen Node.js'i yükleyin."
+                    }
+                }
+            }
+        }
     }
 
     post {
