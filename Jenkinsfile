@@ -18,15 +18,26 @@ pipeline {
             }
         }
 
-        stage('Check Node.js') {
+        stage('Check Dependencies') {
 			steps {
 				script {
 					try {
-						sh 'which node || true'
+						// Node.js kontrolü
+                        sh 'which node || true'
                         sh '/opt/homebrew/bin/node --version || /usr/local/bin/node --version'
                         echo "Node.js yüklü!"
+
+                        // npm kontrolü
+                        sh 'which npm || true'
+                        sh '/opt/homebrew/bin/npm --version || /usr/local/bin/npm --version'
+                        echo "npm yüklü!"
+
+                        // Appium kontrolü
+                        sh 'which appium || true'
+                        sh 'appium --version || npm list -g appium'
+                        echo "Appium yüklü!"
                     } catch (err) {
-						error "Node.js yüklü değil! Lütfen Node.js'i yükleyin."
+						error "Bağımlılık kontrolünde hata: ${err.message}"
                     }
                 }
             }
