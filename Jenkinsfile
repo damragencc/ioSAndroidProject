@@ -12,7 +12,7 @@ pipeline {
 
     triggers {
 		// Her 5 dakikada bir kontrol et
-        pollSCM('*/5 * * * *')
+        pollSCM('* * * * *')
     }
 
     stages {
