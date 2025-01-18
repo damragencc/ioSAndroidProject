@@ -15,35 +15,14 @@ pipeline {
     }
 
     stages {
-		stage('Test Jenkins') {
-			steps {
-				echo "Jenkins çalışıyor!"
-                sh 'pwd'
-                sh 'ls -la'
-            }
-        }
-
-        stage('Check Dependencies') {
+		stage('Check Dependencies') {
 			steps {
 				script {
-					try {
-						// Node.js kontrolü
-                        sh 'which node || true'
-                        sh '/opt/homebrew/bin/node --version || /usr/local/bin/node --version'
-                        echo "Node.js yüklü!"
-
-                        // npm kontrolü
-                        sh 'which npm || true'
-                        sh '/opt/homebrew/bin/npm --version || /usr/local/bin/npm --version'
-                        echo "npm yüklü!"
-
-                        // Appium kontrolü
-                        sh 'which appium || true'
-                        sh 'appium --version || npm list -g appium'
-                        echo "Appium yüklü!"
-                    } catch (err) {
-						error "Bağımlılık kontrolünde hata: ${err.message}"
-                    }
+					sh '''
+                        node -v
+                        npm -v
+                        appium -v
+                    '''
                 }
             }
         }
@@ -52,31 +31,9 @@ pipeline {
 			steps {
 				script {
 					sh '''
-                        # Varsa çalışan Appium instance'ını durdur
                         pkill -f appium || true
-
-                        # Appium server'ı başlat
                         nohup appium > appium.log 2>&1 &
-
-                        # Server'ın başlaması için bekle
                         sleep 5
-
-                        # Appium'un çalıştığını kontrol et
-                        ps aux | grep appium
-                    '''
-                }
-            }
-        }
-
-        stage('Prepare Test Environment') {
-			steps {
-				script {
-					sh '''
-                        # iOS cihaz bağlantısını kontrol et
-                        idevice_id -l | grep ${UDID} || (echo "iOS cihaz bağlı değil!" && exit 1)
-
-                        # WDA durumunu kontrol et
-                        ideviceinstaller -l | grep WebDriverAgentRunner || echo "WDA yüklü değil"
                     '''
                 }
             }
@@ -87,15 +44,11 @@ pipeline {
 				script {
 					sh '''
                         cd ${WORKSPACE}
-
-                        # Maven test komutunu workspace'de çalıştır
-                        mvn clean test \
-                            -Dplatform.name=${PLATFORM_NAME} \
+                        mvn clean test -Dplatform.name=${PLATFORM_NAME} \
                             -Dplatform.version=${PLATFORM_VERSION} \
                             -Ddevice.name="${DEVICE_NAME}" \
                             -Dudid=${UDID} \
-                            -Dapp.path=${APP_PATH} \
-                            -Dsurefire.reportsDirectory=${WORKSPACE}/target/surefire-reports
+                            -Dapp.path=${APP_PATH}
                     '''
                 }
             }
@@ -105,30 +58,22 @@ pipeline {
     post {
 		always {
 			script {
-				// Appium server'ı durdur
+				// Appium'u durdur
                 sh 'pkill -f appium || true'
 
-                // Test raporlarının yerini kontrol et
-                sh 'ls -la ${WORKSPACE}/target/surefire-reports || true'
+                // Test raporlarını arşivle
+                archiveArtifacts artifacts: '**/target/surefire-reports/**/*', allowEmptyArchive: true
+                junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
 
-                // Test raporlarını her durumda arşivle
-                archiveArtifacts artifacts: 'target/surefire-reports/**/*', allowEmptyArchive: true
-                junit allowEmptyResults: true, testResults: 'target/surefire-reports/**/*.xml'
-
-                // Test log dosyalarını da arşivle
+                // Appium loglarını arşivle
                 archiveArtifacts artifacts: 'appium.log', allowEmptyArchive: true
             }
         }
         success {
-			echo "Pipeline başarıyla tamamlandı!"
-            script {
-				echo "Test raporları başarıyla oluşturuldu"
-                // Rapor dosyalarının içeriğini göster
-                sh 'cat target/surefire-reports/*.txt || true'
-            }
+			echo "Tests completed successfully!"
         }
         failure {
-			echo "Pipeline'da hata oluştu!"
+			echo "Tests failed!"
         }
     }
 }
