@@ -23,45 +23,14 @@ pipeline {
                         node -v
                         npm -v
                         appium -v
-                        idevice_id -l
-                        ideviceinstaller -l
-                    '''
-                }
-            }
-        }
 
-        stage('Start Appium Server') {
-			steps {
-				script {
-					sh '''
-                        # Tüm Appium process'lerini bul ve durdur
-                        ps aux | grep appium | grep -v grep | awk '{print $2}' | xargs kill -9 || true
-
-                        # Port'u kontrol et ve temizle
-                        lsof -ti:${APPIUM_PORT} | xargs kill -9 || true
-
-                        # Appium'u başlat
-                        nohup appium -p ${APPIUM_PORT} --log appium.log --log-timestamp --local-timezone > appium.log 2>&1 &
-
-                        # Server'ın başlamasını bekle
-                        echo "Appium server başlatılıyor..."
-                        for i in {1..30}; do
-                            if curl -s http://localhost:${APPIUM_PORT}/wd/hub/status > /dev/null; then
-                                echo "Appium server başarıyla başlatıldı!"
-                                break
-                            fi
-                            if [ $i -eq 30 ]; then
-                                echo "Appium server başlatılamadı!"
-                                exit 1
-                            fi
-                            echo "Bekleniyor... ($i/30)"
-                            sleep 2
-                        done
-
-                        # Server'ın çalıştığını son bir kez kontrol et
-                        if ! curl -s http://localhost:${APPIUM_PORT}/wd/hub/status > /dev/null; then
-                            echo "Appium server çalışmıyor!"
+                        echo "iOS cihaz kontrolü yapılıyor..."
+                        DEVICE_ID=$(idevice_id -l)
+                        if [ -z "$DEVICE_ID" ]; then
+                            echo "HATA: iOS cihaz bulunamadı!"
                             exit 1
+                        else
+                            echo "iOS cihaz bulundu: $DEVICE_ID"
                         fi
                     '''
                 }
@@ -87,22 +56,16 @@ pipeline {
     post {
 		always {
 			script {
-				// Appium'u durdur
-                sh 'pkill -f appium || true'
-
-                // Test raporlarını arşivle
+				// Test raporlarını arşivle
                 archiveArtifacts artifacts: '**/target/surefire-reports/**/*', allowEmptyArchive: true
                 junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
-
-                // Appium loglarını arşivle
-                archiveArtifacts artifacts: 'appium.log', allowEmptyArchive: true
             }
         }
         success {
 			echo "Tests completed successfully!"
         }
         failure {
-			echo "Tests failedd!"
+			echo "Tests failed!"
         }
     }
 }
