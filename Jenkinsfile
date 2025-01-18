@@ -71,7 +71,7 @@ pipeline {
             }
         }
         success {
-			echo "Tests completed successfullyy!"
+			echo "Tests completed successfully!"
         }
         failure {
 			echo "Tests failed!"
