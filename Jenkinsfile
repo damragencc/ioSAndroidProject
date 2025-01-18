@@ -40,12 +40,6 @@ pipeline {
                         # Port'u kontrol et ve temizle
                         lsof -ti:${APPIUM_PORT} | xargs kill -9 || true
 
-                        # Biraz bekle
-                        sleep 2
-
-                        # Appium loglarını temizle
-                        rm -f appium.log
-
                         # Appium'u başlat
                         nohup appium -p ${APPIUM_PORT} --log appium.log --log-timestamp --local-timezone > appium.log 2>&1 &
 
